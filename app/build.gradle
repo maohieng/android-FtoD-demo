@@ -1,0 +1,68 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 28
+    defaultConfig {
+        applicationId "edu.niptict.cs2.android.demo"
+        minSdkVersion 15
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        // Export Database Schemas
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments = ["room.schemaLocation":
+                                     "$projectDir/schemas".toString()]
+
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+ext {
+    // App Dependencies
+    // UIs
+    appCompatV = '1.1.0-rc01'
+    constraintLayoutV = '2.0.0-beta2'
+    recyclerV = '1.1.0-beta01'
+    lifecycleV = '2.0.0'
+    // Consistencies
+    roomV = '2.2.0-alpha01'
+    // Requests
+    gsonV = '2.8.5'
+    glideV = '4.8.0'
+    retrofitV = '2.5.0'
+    okhttpV = '3.12.1'
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    // ROOM
+    implementation "androidx.room:room-runtime:$roomV"
+    annotationProcessor "androidx.room:room-compiler:$roomV"
+
+    // UIs
+    implementation "androidx.appcompat:appcompat:$appCompatV"
+    implementation "androidx.constraintlayout:constraintlayout:$constraintLayoutV"
+    implementation "androidx.recyclerview:recyclerview:$recyclerV"
+
+    // Requests
+    implementation "com.squareup.retrofit2:retrofit:$retrofitV"
+    implementation "com.squareup.retrofit2:converter-gson:$retrofitV"
+    implementation "com.squareup.okhttp3:logging-interceptor:$okhttpV"
+    implementation 'com.google.code.gson:gson:2.8.5'
+
+    // Testing
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+}
