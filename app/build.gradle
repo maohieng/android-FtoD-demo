@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "edu.niptict.cs2.android.demo"
-        minSdkVersion 15
+        minSdkVersion 19
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -25,6 +25,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    // Use Java8
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 ext {
@@ -32,6 +38,8 @@ ext {
     // UIs
     appCompatV = '1.1.0-rc01'
     constraintLayoutV = '2.0.0-beta2'
+    materialV = '1.1.0-alpha08'
+
     recyclerV = '1.1.0-beta01'
     lifecycleV = '2.0.0'
     // Consistencies
@@ -46,6 +54,12 @@ ext {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
+    // ViewModel and LiveData
+    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleV"
+    // annotationProcessor "androidx.lifecycle:lifecycle-compiler:$rootProject.lifecycleVersion" // use kapt for Kotlin
+    // alternately - if using Java8, use the following instead of lifecycle-compiler
+    implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycleV"
+
     // ROOM
     implementation "androidx.room:room-runtime:$roomV"
     annotationProcessor "androidx.room:room-compiler:$roomV"
@@ -54,6 +68,9 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$appCompatV"
     implementation "androidx.constraintlayout:constraintlayout:$constraintLayoutV"
     implementation "androidx.recyclerview:recyclerview:$recyclerV"
+    // Material design
+    // See https://material.io/develop/android/docs/getting-started/
+    implementation "com.google.android.material:material:$materialV"
 
     // Requests
     implementation "com.squareup.retrofit2:retrofit:$retrofitV"

@@ -5,21 +5,16 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.MainThread;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
 
 import edu.niptict.cs2.android.demo.AppExecutors;
-import edu.niptict.cs2.android.demo.R;
 import edu.niptict.cs2.android.demo.api.GithubService;
 import edu.niptict.cs2.android.demo.api.RESTClient;
 import edu.niptict.cs2.android.demo.db.AppDatabase;
 import edu.niptict.cs2.android.demo.db.entity.ContributorEntity;
-import edu.niptict.cs2.android.demo.model.Contributor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -28,22 +23,15 @@ import retrofit2.Response;
  * MainActivity to demonstrate all your logic code is in here.
  * Without using ViewModel, your app business logic and your view are mess up together!
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseListActivity {
 
     private static final String TAG = "MainActivity";
-
-    RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        recyclerView = findViewById(R.id.recyclerView);
 
-        // Setup recyclerview
-        ContributorListAdapter listAdapter = new ContributorListAdapter(this);
-        recyclerView.setAdapter(listAdapter);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        // UIs already setup at BaseListActivity
 
         final AppExecutors appExecutors = AppExecutors.getInstance();
         final AppDatabase appDatabase = AppDatabase.getInstance(getApplicationContext());
@@ -116,10 +104,8 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    @MainThread
-    private void updateUI(List<? extends Contributor> contributors) {
-        ContributorListAdapter adapter = (ContributorListAdapter) recyclerView.getAdapter();
-        assert adapter != null; // throw if it is null
-        adapter.notifyDataSetChanged(contributors);
+    @Override
+    public void onRefresh() {
+        // Do nothing cos we need to change a lot of code...
     }
 }
