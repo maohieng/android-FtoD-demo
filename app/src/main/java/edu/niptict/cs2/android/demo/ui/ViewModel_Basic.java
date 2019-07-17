@@ -59,53 +59,105 @@ public class ViewModel_Basic extends AndroidViewModel {
                     final MediatorLiveData<List<ContributorEntity>> result = new MediatorLiveData<>();
 
                     Log.i(TAG, "Load from database.");
-                    LiveData<List<ContributorEntity>> dbLiveData = mAppDatabase.contributorDAO().listAllAsync();
+                    final LiveData<List<ContributorEntity>> dbSource = loadContributorsFromDB();
 
                     // observe from database change
-                    result.addSource(dbLiveData, new Observer<List<ContributorEntity>>() {
+                    result.addSource(dbSource, new Observer<List<ContributorEntity>>() {
                         @Override
                         public void onChanged(List<ContributorEntity> contributorEntities) {
-                            result.setValue(contributorEntities);
-                        }
-                    });
+                            // remove db source cos we need to observe other source for latest value update
+                            result.removeSource(dbSource);
 
-                    Call<List<ContributorEntity>> contributorsCall = mWebService.listContributors(input.owner, input.repo);
-                    // request asynchronously
-                    Log.i(TAG, "Request from server...");
-                    contributorsCall.enqueue(new Callback<List<ContributorEntity>>() {
-                        @Override
-                        public void onResponse(Call<List<ContributorEntity>> call, Response<List<ContributorEntity>> response) {
-                            Log.i(TAG, "Loading completed.");
-
-                            if (response.isSuccessful()) {
-                                Log.i(TAG, "Request successful.");
-
-                                final List<ContributorEntity> contributors = response.body();
-
-                                // Insert response into database asynchronously
-                                mAppExecutors.runOnDiskIOThread(new Runnable() {
+                            boolean shouldFetch = (contributorEntities == null || contributorEntities.isEmpty()) || input.forceFetch;
+                            Log.i(TAG, "Should fetch from network? " + shouldFetch);
+                            if (shouldFetch) {
+                                fetchFromNetwork(input, result, dbSource);
+                            } else {
+                                // we re-attach dbSource as a new source, it will dispatch its latest value quickly
+                                result.addSource(dbSource, new Observer<List<ContributorEntity>>() {
                                     @Override
-                                    public void run() {
-                                        mAppDatabase.contributorDAO().insert(contributors);
-
-                                        // This will trigger change to mContributorsLiveData cos it observing database change
+                                    public void onChanged(List<ContributorEntity> contributorEntities) {
+                                        result.setValue(contributorEntities);
                                     }
                                 });
-                            } else {
-                                Log.e(TAG, "Request error, code=" + response.code() + ", msg=" + response.message());
-                                result.setValue(null);
                             }
-                        }
-
-                        @Override
-                        public void onFailure(Call<List<ContributorEntity>> call, Throwable t) {
-                            t.printStackTrace();
-                            result.setValue(null);
                         }
                     });
 
                     return result;
                 }
+            }
+        });
+    }
+
+    private LiveData<List<ContributorEntity>> loadContributorsFromDB() {
+        return mAppDatabase.contributorDAO().listAllAsync();
+    }
+
+    private void fetchFromNetwork(final ContributorParams inputParams,
+                                  final MediatorLiveData<List<ContributorEntity>> result, LiveData<List<ContributorEntity>> dbSource) {
+//        1. Call webservice
+//        2. save response into DB
+//        3. result observes loadDB
+//        4. for error, result observes original dbSource
+
+        Call<List<ContributorEntity>> contributorsCall = mWebService.listContributors(inputParams.owner, inputParams.repo);
+        // request asynchronously
+        Log.i(TAG, "Request from server...");
+        contributorsCall.enqueue(new Callback<List<ContributorEntity>>() {
+            @Override
+            public void onResponse(Call<List<ContributorEntity>> call, Response<List<ContributorEntity>> response) {
+                Log.i(TAG, "Loading completed.");
+
+                if (response.isSuccessful()) {
+                    Log.i(TAG, "Request successful.");
+
+                    final List<ContributorEntity> contributors = response.body();
+
+                    // Insert response into database asynchronously
+                    Log.i(TAG, "Save response into DB.");
+                    mAppExecutors.runOnDiskIOThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mAppDatabase.contributorDAO().insert(contributors);
+
+                            // reload from DB
+                            mAppExecutors.runOnMainThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // Observe from DB
+                                    result.addSource(loadContributorsFromDB(), new Observer<List<ContributorEntity>>() {
+                                        @Override
+                                        public void onChanged(List<ContributorEntity> contributorEntities) {
+                                            result.setValue(contributorEntities);
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    Log.e(TAG, "Request error, code=" + response.code() + ", msg=" + response.message());
+                    // Back to observe original db source
+                    result.addSource(dbSource, new Observer<List<ContributorEntity>>() {
+                        @Override
+                        public void onChanged(List<ContributorEntity> contributorEntities) {
+                            result.setValue(contributorEntities);
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<ContributorEntity>> call, Throwable t) {
+                t.printStackTrace();
+                // Back to observe original db source
+                result.addSource(dbSource, new Observer<List<ContributorEntity>>() {
+                    @Override
+                    public void onChanged(List<ContributorEntity> contributorEntities) {
+                        result.setValue(contributorEntities);
+                    }
+                });
             }
         });
     }
@@ -126,13 +178,13 @@ public class ViewModel_Basic extends AndroidViewModel {
         mContributorTrigger.setValue(newParams);
     }
 
-    public void reloadContributors() {
+    public void reloadContributors(boolean forceFetch) {
         ContributorParams existing = mContributorTrigger.getValue();
 
         if (existing != null) {
             Log.i(TAG, "reloadContributors: start reloading...");
             // Set new value to trigger re-load
-            mContributorTrigger.setValue(new ContributorParams(existing.owner, existing.repo));
+            mContributorTrigger.setValue(new ContributorParams(existing.owner, existing.repo, forceFetch));
         } else {
             Log.e(TAG, "reloadContributors: please load contributors instead.");
         }
@@ -145,10 +197,12 @@ public class ViewModel_Basic extends AndroidViewModel {
     public static class ContributorParams {
         private final String owner;
         private final String repo;
+        private final boolean forceFetch;
 
-        public ContributorParams(String owner, String repo) {
+        public ContributorParams(String owner, String repo, boolean forceFetch) {
             this.owner = owner;
             this.repo = repo;
+            this.forceFetch = forceFetch;
         }
 
         // Implement to use equal()
@@ -168,18 +222,19 @@ public class ViewModel_Basic extends AndroidViewModel {
             ContributorParams params = (ContributorParams) obj;
 
             return this.owner.equals(params.owner) &&
-                    this.repo.equals(params.repo);
+                    this.repo.equals(params.repo) &&
+                    this.forceFetch == params.forceFetch;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(owner, repo);
+            return Objects.hash(owner, repo, forceFetch);
         }
 
         @NonNull
         @Override
         public String toString() {
-            return "ContributorParams:{owner=" + owner + ", repo=" + repo + "}";
+            return "ContributorParams:{owner=" + owner + ", repo=" + repo + ", forceFetch=" + forceFetch + "}";
         }
 
         public String getOwner() {
@@ -188,6 +243,10 @@ public class ViewModel_Basic extends AndroidViewModel {
 
         public String getRepo() {
             return repo;
+        }
+
+        public boolean isForceFetch() {
+            return forceFetch;
         }
     }
 }

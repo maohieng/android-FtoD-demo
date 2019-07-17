@@ -17,9 +17,9 @@ import edu.niptict.cs2.android.demo.model.Contributor;
  *
  * @autor MAO Hieng 7/15/2019
  */
-public class MainActivityWithViewModel extends BaseListActivity {
+public class MainActivityWithViewModel_Basic extends BaseListActivity {
 
-    private static final String TAG = "MainActivityWithViewModel";
+    private static final String TAG = "MainActivityWithViewModel_Basic";
 
     ViewModel_Basic mViewModelBasic;
 
@@ -38,7 +38,7 @@ public class MainActivityWithViewModel extends BaseListActivity {
                 setRefreshing(false);
 
                 if (contributors == null) {
-                    Toast.makeText(MainActivityWithViewModel.this, "No data. Check log for detail.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivityWithViewModel_Basic.this, "No data. Check log for detail.", Toast.LENGTH_SHORT).show();
                 } else {
                     updateUI(contributors);
                 }
@@ -46,13 +46,13 @@ public class MainActivityWithViewModel extends BaseListActivity {
         });
 
         // Start loading contributors
-        mViewModelBasic.loadContributors(new ViewModel_Basic.ContributorParams("square", "retrofit"));
+        mViewModelBasic.loadContributors(new ViewModel_Basic.ContributorParams("square", "retrofit", false));
 
     }
 
     @Override
     public void onRefresh() {
         // Just call reload method that provided by ViewModel
-        mViewModelBasic.reloadContributors();
+        mViewModelBasic.reloadContributors(true);
     }
 }

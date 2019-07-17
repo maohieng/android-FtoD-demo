@@ -21,6 +21,7 @@ import retrofit2.Response;
 
 /**
  * MainActivity to demonstrate all your logic code is in here.
+ * It doesn't support the configuration change.
  * Without using ViewModel, your app business logic and your view are mess up together!
  */
 public class MainActivity extends BaseListActivity {
